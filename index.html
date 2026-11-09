@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Gestione barca</title>
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Barca">
+<style>
+:root{box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px);
+--bg:#f2f5f6;--card:#fff;--ink:#12263a;--mute:#5b6b7a;--line:#d5dde2;--acc:#0e6f7a;--acc-ink:#fff;--red:#c8372d;--amb:#b87a0a;--ok:#2a7d50}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){color-scheme:dark;--bg:#0e1a24;--card:#16263411;--card:#162634;--ink:#e6eef3;--mute:#93a5b3;--line:#28404f;--acc:#3fb5c2;--acc-ink:#06222a;--red:#ff7a6e;--amb:#f0b44c;--ok:#5fd194}}
+:root[data-theme="dark"]{color-scheme:dark;--bg:#0e1a24;--card:#162634;--ink:#e6eef3;--mute:#93a5b3;--line:#28404f;--acc:#3fb5c2;--acc-ink:#06222a;--red:#ff7a6e;--amb:#f0b44c;--ok:#5fd194}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.45 system-ui,-apple-system,"Segoe UI",sans-serif}
+main{max-width:760px;margin:0 auto;padding:16px}
+h1{font:600 1.7rem/1.1 Georgia,"Times New Roman",serif;margin:8px 0 2px}
+.sub{color:var(--mute);margin:0 0 14px}
+nav{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:6px}
+nav button{flex:1 1 auto;padding:10px 14px;border:1px solid var(--line);background:var(--card);color:var(--ink);border-radius:8px;font:inherit;font-weight:600;cursor:pointer}
+nav button[aria-pressed="true"]{background:var(--acc);color:var(--acc-ink);border-color:var(--acc)}
+nav.sub2 button{font-weight:500;padding:8px 12px}
+.sum{display:flex;gap:8px;margin:12px 0}
+.sum div{flex:1;background:var(--card);border:1px solid var(--line);border-radius:8px;padding:8px 10px;font-size:.85rem;color:var(--mute)}
+.sum b{display:block;font-size:1.4rem;color:var(--ink)}
+.sum .r b{color:var(--red)}.sum .a b{color:var(--amb)}.sum .o b{color:var(--ok)}
+form{display:flex;gap:8px;flex-wrap:wrap;background:var(--card);border:1px solid var(--line);border-radius:8px;padding:10px;margin:10px 0}
+form input,form select{flex:1 1 150px;padding:9px;border:1px solid var(--line);border-radius:6px;background:var(--bg);color:var(--ink);font:inherit;min-width:0}
+form button{padding:9px 16px;border:0;border-radius:6px;background:var(--acc);color:var(--acc-ink);font:inherit;font-weight:600;cursor:pointer}
+ul{list-style:none;margin:0;padding:0;display:grid;gap:8px}
+li{display:flex;align-items:center;gap:10px;background:var(--card);border:1px solid var(--line);border-left:6px solid var(--ok);border-radius:8px;padding:10px 12px}
+li.red{border-left-color:var(--red)}li.amb{border-left-color:var(--amb)}li.done{opacity:.55}li.done .t{text-decoration:line-through}
+.t{flex:1;min-width:0;overflow-wrap:anywhere}
+.t small{display:block;color:var(--mute)}
+.st{font-weight:600;font-size:.85rem;white-space:nowrap}
+.red .st{color:var(--red)}.amb .st{color:var(--amb)}.ok .st{color:var(--ok)}
+li button{border:0;background:none;color:var(--mute);font-size:1.2rem;cursor:pointer;padding:4px 8px}
+li input[type=checkbox]{width:22px;height:22px;accent-color:var(--acc)}
+.st input{padding:4px;border:1px solid var(--line);border-radius:6px;background:var(--bg);color:var(--ink);font:inherit;max-width:150px}
+.empty{color:var(--mute);padding:18px;text-align:center;border:1px dashed var(--line);border-radius:8px}
+.foot{display:flex;gap:8px;margin-top:20px;flex-wrap:wrap}
+.foot button{padding:8px 12px;border:1px solid var(--line);background:var(--card);color:var(--ink);border-radius:6px;font:inherit;cursor:pointer}
+button:focus-visible,input:focus-visible,select:focus-visible{outline:2px solid var(--acc);outline-offset:2px}
+</style>
+</head>
+<body>
+<main>
+<h1>Gestione barca</h1>
+<p class="sub">Scadenze e lavori in un unico posto.</p>
+<nav id="menu"></nav>
+<nav id="flt" class="sub2"></nav>
+<div id="sum" class="sum"></div>
+<form id="f"></form>
+<ul id="list"></ul>
+<div class="foot">
+<button id="exp">Esporta backup</button>
+<label class="foot"><button type="button" id="impb">Importa backup</button><input id="imp" type="file" accept=".json" hidden></label>
+</div>
+</main>
+<script>
+const SEC={
+ doc:{label:'Scadenze Documenti',scad:1,ph:'Es. Assicurazione',sug:['Assicurazione RC','Licenza di navigazione','Certificato di sicurezza','Patente nautica','Bollo / tassa di stazionamento','Contratto di ormeggio','Certificato d’uso motore']},
+ dot:{label:'Scadenze dotazioni di Bordo',scad:1,ph:'Es. Razzi di segnalamento',sug:['Razzi di segnalamento','Estintori','Zattera di salvataggio','Giubbotti di salvataggio','EPIRB','Cassetta di pronto soccorso','Boetta / salvagente anulare']},
+ lav:{label:'Lavori da fare',ph:'Es. Cambio olio e filtri'},
+ sto:{label:'Storico lavori',sto:1}
+};
+const CATS={ele:'Elettrico',sca:'Scafo',mot:'Motore'};
+let S={sec:'doc',f:'all',data:{}};
+const KEY='barca-v1';
+try{const r=localStorage.getItem(KEY);if(r)S.data=JSON.parse(r)||{}}catch(e){}
+if(!S.data.lav){S.data.lav=[];for(const c in CATS)(S.data[c]||[]).forEach(i=>S.data.lav.push({...i,c}))}
+const K=()=>S.sec==='sto'?'lav':S.sec;
+const save=()=>{try{localStorage.setItem(KEY,JSON.stringify(S.data))}catch(e){}};
+const $=id=>document.getElementById(id);
+const days=d=>Math.round((new Date(d+'T00:00:00')-new Date(new Date().toDateString()))/864e5);
+const fmt=d=>new Date(d+'T00:00:00').toLocaleDateString('it-IT',{day:'numeric',month:'short',year:'numeric'});
+const esc=s=>s.replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+function render(){
+ const sec=SEC[S.sec],isScad=!!sec.scad,isSto=!!sec.sto,key=K(),items=(S.data[key]=S.data[key]||[]);
+ $('menu').innerHTML=Object.entries(SEC).map(([k,v])=>`<button data-s="${k}" aria-pressed="${k===S.sec}">${v.label}</button>`).join('');
+ $('flt').innerHTML=isScad?'':[['all','Tutti'],...Object.entries(CATS)].map(([k,v])=>`<button data-f="${k}" aria-pressed="${k===S.f}">${v}</button>`).join('');
+ let sum='';
+ if(isScad){const c={red:0,amb:0,ok:0};items.forEach(i=>{const d=days(i.date);c[d<0?'red':d<=30?'amb':'ok']++});
+  sum=`<div class="r"><b>${c.red}</b>scaduti</div><div class="a"><b>${c.amb}</b>entro 30 giorni</div><div class="o"><b>${c.ok}</b>in regola</div>`}
+ else if(isSto){sum=`<div class="o"><b>${items.filter(i=>i.done).length}</b>lavori eseguiti</div>`}else{const n=items.filter(i=>!i.done).length;sum=`<div><b>${n}</b>da fare</div><div class="o"><b>${items.length-n}</b>completati</div>`}
+ $('sum').innerHTML=sum;
+ $('f').style.display=isSto?'none':'';
+ $('f').innerHTML=isScad
+  ?`<input name="n" list="sg" placeholder="${sec.ph}" required aria-label="Nome"><datalist id="sg">${sec.sug.map(s=>`<option value="${esc(s)}">`).join('')}</datalist><input name="d" type="date" required aria-label="Data di scadenza"><button>Aggiungi scadenza</button>`
+  :`<input name="n" placeholder="${sec.ph}" required aria-label="Lavoro"><input name="d" type="date" aria-label="Data prevista"><select name="c" aria-label="Categoria">${Object.entries(CATS).map(([k,v])=>`<option value="${k}">${v}</option>`).join('')}</select><select name="p" aria-label="Priorità"><option value="0">Normale</option><option value="1">Urgente</option></select><button>Aggiungi lavoro</button>`;
+ let rows=items.map((it,i)=>({it,i})).filter(r=>isScad||!!r.it.done===isSto);
+ if(!isScad&&S.f!=='all')rows=rows.filter(r=>r.it.c===S.f);
+ rows.sort(isScad?(a,b)=>a.it.date.localeCompare(b.it.date):isSto?(a,b)=>(b.it.doneDate||'').localeCompare(a.it.doneDate||''):(a,b)=>(b.it.p-a.it.p)||(a.it.date||'9').localeCompare(b.it.date||'9'));
+ $('list').innerHTML=rows.length?rows.map(({it,i})=>{
+  if(isScad){const d=days(it.date),c=d<0?'red':d<=30?'amb':'ok';
+   const st=d<0?`Scaduto da ${-d} g`:d===0?'Scade oggi':`Tra ${d} g`;
+   return `<li class="${c}"><span class="t">${esc(it.n)}<small>${fmt(it.date)}</small></span><span class="st">${st}</span><button data-del="${i}" aria-label="Elimina">✕</button></li>`}
+  if(isSto)return `<li class="ok"><span class="t">${esc(it.n)}<small>${CATS[it.c]||''}${it.date?', prevista '+fmt(it.date):''}</small></span><label class="st">Eseguito il <input type="date" data-dd="${i}" value="${it.doneDate||''}"></label><button data-del="${i}" aria-label="Elimina">✕</button></li>`;
+  return `<li class="${it.p&&!it.done?'red':'ok'}${it.done?' done':''}"><input type="checkbox" data-chk="${i}" ${it.done?'checked':''} aria-label="Completato"><span class="t">${esc(it.n)}<small>${CATS[it.c]||''}${it.date?', prevista '+fmt(it.date):''}</small></span>${it.date&&days(it.date)<0?'<span class="st" style="color:var(--red)">In ritardo</span>':''}${it.p?'<span class="st">Urgente</span>':''}<button data-del="${i}" aria-label="Elimina">✕</button></li>`}).join('')
+  :`<li class="empty" style="display:block;border-left:1px dashed var(--line)">${isScad?'Nessuna scadenza. Aggiungine una qui sopra.':isSto?'Nessun lavoro eseguito. Spunta un lavoro in Lavori da fare.':'Nessun lavoro. Aggiungine uno qui sopra.'}</li>`;
+}
+document.addEventListener('click',e=>{
+ const t=e.target;
+ if(t.dataset.s){S.sec=t.dataset.s}
+ else if(t.dataset.f){S.f=t.dataset.f}
+ else if(t.dataset.del!==undefined){S.data[K()].splice(+t.dataset.del,1);save()}
+ else return;
+ render();
+});
+document.addEventListener('change',e=>{
+ const t=e.target;
+ if(t.dataset.chk!==undefined){const w=S.data[K()][+t.dataset.chk];w.done=t.checked;w.doneDate=t.checked?new Date().toLocaleDateString('sv-SE'):'';save();render()}
+ if(t.dataset.dd!==undefined){S.data[K()][+t.dataset.dd].doneDate=t.value;save()}
+});
+$('f').addEventListener('submit',e=>{
+ e.preventDefault();
+ const f=new FormData($('f')),n=f.get('n').trim();
+ if(!n)return;
+ (S.data[S.sec]=S.data[S.sec]||[]).push(SEC[S.sec].scad?{n,date:f.get('d')}:{n,date:f.get('d')||'',c:f.get('c'),p:+f.get('p'),done:false});
+ save();render();
+});
+$('exp').onclick=()=>{
+ const a=document.createElement('a');
+ a.href='data:application/json;charset=utf-8,'+encodeURIComponent(JSON.stringify(S.data,null,1));
+ a.download='barca-backup.json';a.click();
+};
+$('impb').onclick=()=>$('imp').click();
+$('imp').onchange=e=>{
+ const r=new FileReader();
+ r.onload=()=>{try{S.data=JSON.parse(r.result)||{};save();render()}catch(x){alert('File non valido.')}};
+ if(e.target.files[0])r.readAsText(e.target.files[0]);
+};
+render();
+</script>
+</body>
+</html>
