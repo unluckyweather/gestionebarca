@@ -40,6 +40,8 @@ h2{font-size:1.15rem;font-weight:800;margin:0 2px 2px;letter-spacing:-.01em}
 form{display:flex;gap:10px;flex-wrap:wrap;background:var(--card);border:1px solid var(--line);border-radius:14px;padding:12px;margin:0 0 16px}
 form input,form select{flex:1 1 150px;padding:11px 12px;border:1px solid var(--line);border-radius:10px;background:var(--bg);color:var(--ink);font:inherit;min-width:0}
 form button{flex:1 1 100%;padding:12px;border:0;border-radius:10px;background:var(--acc);color:var(--on);font:inherit;font-weight:700;cursor:pointer}
+.addb{display:none;width:100%;padding:13px;margin:0 0 16px;border:0;border-radius:12px;background:var(--acc);color:var(--on);font:inherit;font-weight:700;font-size:1rem;cursor:pointer}
+form button.ghost{background:none;color:var(--mute);border:1px solid var(--line)}
 ul{list-style:none;margin:0;padding:0;display:grid;gap:10px}
 li{display:flex;flex-wrap:wrap;align-items:center;gap:12px;background:var(--card);border:1px solid var(--line);border-radius:14px;padding:13px 14px;box-shadow:inset 3px 0 0 var(--ok)}
 li.red{box-shadow:inset 3px 0 0 var(--red)}
@@ -77,6 +79,7 @@ button:focus-visible,input:focus-visible,select:focus-visible{outline:2px solid 
 <p id="hint" class="hint"></p>
 <nav id="flt"></nav>
 <div id="eng" class="eng"></div>
+<button id="addb" class="addb" type="button" data-add="1">+ Aggiungi lavoro</button>
 <form id="f"></form>
 <ul id="list"></ul>
 <div class="foot">
@@ -132,10 +135,10 @@ function render(){
  else if(isSto){sum=`<div class="o" aria-pressed="true"><b>${items.filter(i=>i.done).length}</b>lavori eseguiti</div><div data-sn="lav" role="button" tabindex="0"><b>${items.filter(i=>!i.done).length}</b>da fare</div>`}else{const n=items.filter(i=>!i.done).length;sum=`<div aria-pressed="true"><b>${n}</b>da fare</div><div class="o" data-sn="sto" role="button" tabindex="0"><b>${items.length-n}</b>completati</div>`}
  $('sum').innerHTML=sum;
  $('eng').innerHTML=engCard(items);
- $('f').style.display=isSto?'none':'';
+ $('f').style.display=(isSto||!S.add)?'none':'';$('addb').style.display=(!isSto&&!S.add)?'block':'none';$('addb').textContent=isScad?'+ Aggiungi scadenza':'+ Aggiungi lavoro';
  $('f').innerHTML=isScad
-  ?`<input name="n" list="sg" placeholder="${sec.ph}" required aria-label="Nome"><datalist id="sg">${sec.sug.map(s=>`<option value="${esc(s)}">`).join('')}</datalist><input name="d" type="date" required aria-label="Data di scadenza"><button>Aggiungi scadenza</button>`
-  :`<input name="n" placeholder="${sec.ph}" required aria-label="Lavoro"><input name="d" type="date" aria-label="Data prevista"><select name="c" aria-label="Categoria">${Object.entries(CATS).map(([k,v])=>`<option value="${k}">${v}</option>`).join('')}</select><select name="p" aria-label="Priorità"><option value="0">Normale</option><option value="1">Urgente</option></select><input name="rn" type="number" min="1" placeholder="Ripeti ogni… mesi (opz.)" aria-label="Ripeti ogni (mesi)"><input type="hidden" name="ru" value="m"><button>Aggiungi lavoro</button>`;
+  ?`<input name="n" list="sg" placeholder="${sec.ph}" required aria-label="Nome"><datalist id="sg">${sec.sug.map(s=>`<option value="${esc(s)}">`).join('')}</datalist><input name="d" type="date" required aria-label="Data di scadenza"><button>Aggiungi scadenza</button><button type="button" class="ghost" data-addc="1">Annulla</button>`
+  :`<input name="n" placeholder="${sec.ph}" required aria-label="Lavoro"><input name="d" type="date" aria-label="Data prevista"><select name="c" aria-label="Categoria">${Object.entries(CATS).map(([k,v])=>`<option value="${k}">${v}</option>`).join('')}</select><select name="p" aria-label="Priorità"><option value="0">Normale</option><option value="1">Urgente</option></select><input name="rn" type="number" min="1" placeholder="Ripeti ogni… mesi (opz.)" aria-label="Ripeti ogni (mesi)"><input type="hidden" name="ru" value="m"><button>Aggiungi lavoro</button><button type="button" class="ghost" data-addc="1">Annulla</button>`;
  let rows=items.map((it,i)=>({it,i})).filter(r=>isScad?(!S.sf||S.sf==='all'||(S.sf==='red'?days(r.it.date)<0:S.sf==='amb'?days(r.it.date)>=0&&days(r.it.date)<=30:days(r.it.date)>30)):!!r.it.done===isSto);
  if(!isScad&&S.f!=='all')rows=rows.filter(r=>r.it.c===S.f);
  rows.sort(isScad?(a,b)=>a.it.date.localeCompare(b.it.date):isSto?(a,b)=>(b.it.doneDate||'').localeCompare(a.it.doneDate||''):(a,b)=>(b.it.p-a.it.p)||(a.it.date||'9').localeCompare(b.it.date||'9'));
@@ -150,10 +153,12 @@ function render(){
 }
 document.addEventListener('click',e=>{
  const t=e.target.closest('[data-sf],[data-sn],[data-ed],[data-s]')||e.target;
- if(t.dataset.s){S.sec=t.dataset.s;S.ren=null;S.sf='all';S.ed=null}
+ if(t.dataset.s){S.sec=t.dataset.s;S.ren=null;S.sf='all';S.ed=null;S.add=false}
  else if(t.dataset.sf){S.sf=S.sf===t.dataset.sf?'all':t.dataset.sf;S.ren=null}
- else if(t.dataset.sn){S.sec=t.dataset.sn;S.sf='all';S.ed=null}
+ else if(t.dataset.sn){S.sec=t.dataset.sn;S.sf='all';S.ed=null;S.add=false}
  else if(t.dataset.f){S.f=t.dataset.f}
+ else if(t.dataset.add){S.add=true;render();const n=document.querySelector('#f [name=n]');if(n)n.focus();return}
+ else if(t.dataset.addc){S.add=false}
  else if(t.dataset.qy){const it=S.data[K()][S.ren],r=$('rd');if(it&&r)r.value=addY(it.date,+t.dataset.qy);return}
  else if(t.dataset.eng){const v=parseFloat($('eh').value);if(isNaN(v))return;S.data.eng={h:v,d:iso(new Date())};save()}
  else if(t.dataset.ed!==undefined){S.ed=+t.dataset.ed;S.ren=null}
@@ -171,7 +176,7 @@ document.addEventListener('change',e=>{
  if(t.dataset.dd!==undefined){S.data[K()][+t.dataset.dd].doneDate=t.value;save()}
 });
 $('f').addEventListener('submit',e=>{
- e.preventDefault();
+ e.preventDefault();S.add=false;
  const f=new FormData($('f')),n=f.get('n').trim();
  if(!n)return;
  (S.data[S.sec]=S.data[S.sec]||[]).push(SEC[S.sec].scad?{n,date:f.get('d')}:(()=>{const rn=+f.get('rn')||0,ru=f.get('ru'),e=(S.data.eng||{}).h||0;return{n,date:f.get('d')||'',c:f.get('c'),p:+f.get('p'),done:false,rn,ru,dh:rn&&ru==='h'?e+rn:0}})());
