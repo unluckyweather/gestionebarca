@@ -38,6 +38,7 @@ li.red{border-left-color:var(--red)}li.amb{border-left-color:var(--amb)}li.done{
 li button{border:0;background:none;color:var(--mute);font-size:1.2rem;cursor:pointer;padding:4px 8px}
 li input[type=checkbox]{width:22px;height:22px;accent-color:var(--acc)}
 .st input{padding:4px;border:1px solid var(--line);border-radius:6px;background:var(--bg);color:var(--ink);font:inherit;max-width:150px}
+li button.rn{border:1px solid var(--acc);background:var(--acc);color:var(--acc-ink);font-size:.85rem;font-weight:600;border-radius:6px;padding:6px 10px}
 .empty{color:var(--mute);padding:18px;text-align:center;border:1px dashed var(--line);border-radius:8px}
 .foot{display:flex;gap:8px;margin-top:20px;flex-wrap:wrap}
 .foot button{padding:8px 12px;border:1px solid var(--line);background:var(--card);color:var(--ink);border-radius:6px;font:inherit;cursor:pointer}
@@ -55,7 +56,7 @@ button:focus-visible,input:focus-visible,select:focus-visible{outline:2px solid 
 <ul id="list"></ul>
 <div class="foot">
 <button id="exp">Esporta backup</button>
-<label class="foot"><button type="button" id="impb">Importa backup</button><input id="imp" type="file" accept=".json" hidden></label>
+<button type="button" id="impb">Importa backup</button><input id="imp" type="file" accept=".json" hidden>
 </div>
 </main>
 <script>
@@ -95,16 +96,18 @@ function render(){
  $('list').innerHTML=rows.length?rows.map(({it,i})=>{
   if(isScad){const d=days(it.date),c=d<0?'red':d<=30?'amb':'ok';
    const st=d<0?`Scaduto da ${-d} g`:d===0?'Scade oggi':`Tra ${d} g`;
-   return `<li class="${c}"><span class="t">${esc(it.n)}<small>${fmt(it.date)}</small></span><span class="st">${st}</span><button data-del="${i}" aria-label="Elimina">✕</button></li>`}
+   return `<li class="${c}"><span class="t">${esc(it.n)}<small>${fmt(it.date)}</small></span>${S.ren===i?`<span class="st"><input type="date" id="rd" aria-label="Nuova scadenza"></span><button class="rn" data-ok="${i}">Salva</button>`:`<span class="st">${st}</span>${d<0?`<button class="rn" data-ren="${i}">Rinnova</button>`:''}`}<button data-del="${i}" aria-label="Elimina">✕</button></li>`}
   if(isSto)return `<li class="ok"><span class="t">${esc(it.n)}<small>${CATS[it.c]||''}${it.date?', prevista '+fmt(it.date):''}</small></span><label class="st">Eseguito il <input type="date" data-dd="${i}" value="${it.doneDate||''}"></label><button data-del="${i}" aria-label="Elimina">✕</button></li>`;
   return `<li class="${it.p&&!it.done?'red':'ok'}${it.done?' done':''}"><input type="checkbox" data-chk="${i}" ${it.done?'checked':''} aria-label="Completato"><span class="t">${esc(it.n)}<small>${CATS[it.c]||''}${it.date?', prevista '+fmt(it.date):''}</small></span>${it.date&&days(it.date)<0?'<span class="st" style="color:var(--red)">In ritardo</span>':''}${it.p?'<span class="st">Urgente</span>':''}<button data-del="${i}" aria-label="Elimina">✕</button></li>`}).join('')
   :`<li class="empty" style="display:block;border-left:1px dashed var(--line)">${isScad?'Nessuna scadenza. Aggiungine una qui sopra.':isSto?'Nessun lavoro eseguito. Spunta un lavoro in Lavori da fare.':'Nessun lavoro. Aggiungine uno qui sopra.'}</li>`;
 }
 document.addEventListener('click',e=>{
  const t=e.target;
- if(t.dataset.s){S.sec=t.dataset.s}
+ if(t.dataset.s){S.sec=t.dataset.s;S.ren=null}
  else if(t.dataset.f){S.f=t.dataset.f}
- else if(t.dataset.del!==undefined){S.data[K()].splice(+t.dataset.del,1);save()}
+ else if(t.dataset.ren!==undefined){S.ren=+t.dataset.ren}
+ else if(t.dataset.ok!==undefined){const v=$('rd').value;if(!v)return;S.data[K()][+t.dataset.ok].date=v;S.ren=null;save()}
+ else if(t.dataset.del!==undefined){S.data[K()].splice(+t.dataset.del,1);S.ren=null;save()}
  else return;
  render();
 });
