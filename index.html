@@ -40,6 +40,8 @@ li input[type=checkbox]{width:22px;height:22px;accent-color:var(--acc)}
 .st input{padding:4px;border:1px solid var(--line);border-radius:6px;background:var(--bg);color:var(--ink);font:inherit;max-width:150px}
 .sum [data-sf],.sum [data-sn]{cursor:pointer}
 .sum [aria-pressed="true"]{outline:2px solid var(--acc)}
+.t{cursor:pointer}
+li input:not([type=checkbox]),li select{padding:6px;border:1px solid var(--line);border-radius:6px;background:var(--bg);color:var(--ink);font:inherit;min-width:0}
 li button.rn{border:1px solid var(--acc);background:var(--acc);color:var(--acc-ink);font-size:.85rem;font-weight:600;border-radius:6px;padding:6px 10px}
 .empty{color:var(--mute);padding:18px;text-align:center;border:1px dashed var(--line);border-radius:8px}
 .foot{display:flex;gap:8px;margin-top:20px;flex-wrap:wrap}
@@ -79,6 +81,13 @@ const $=id=>document.getElementById(id);
 const days=d=>Math.round((new Date(d+'T00:00:00')-new Date(new Date().toDateString()))/864e5);
 const fmt=d=>new Date(d+'T00:00:00').toLocaleDateString('it-IT',{day:'numeric',month:'short',year:'numeric'});
 const esc=s=>s.replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+function editRow(it,i){
+ const sc=!!SEC[S.sec].scad,sto=S.sec==='sto',lb=(t,x)=>`<label style="color:var(--mute);font-size:.85rem">${t} ${x}</label>`;
+ let h=`<li class="ok" style="flex-wrap:wrap"><input name="n" value="${esc(it.n)}" aria-label="Nome" style="flex:1 1 100%">`;
+ h+=lb(sc?'Scadenza':'Prevista',`<input name="date" type="date" value="${it.date||''}">`);
+ if(!sc){h+=`<select name="c" aria-label="Categoria">${Object.entries(CATS).map(([k,v])=>`<option value="${k}"${it.c===k?' selected':''}>${v}</option>`).join('')}</select>`;
+  h+=sto?lb('Eseguito il',`<input name="doneDate" type="date" value="${it.doneDate||''}">`):`<select name="p" aria-label="Priorità"><option value="0"${it.p?'':' selected'}>Normale</option><option value="1"${it.p?' selected':''}>Urgente</option></select>`}
+ return h+`<button class="rn" data-es="${i}">Salva</button><button data-ec="1" style="font-size:.9rem">Annulla</button></li>`}
 function render(){
  const sec=SEC[S.sec],isScad=!!sec.scad,isSto=!!sec.sto,key=K(),items=(S.data[key]=S.data[key]||[]);
  $('menu').innerHTML=Object.entries(SEC).map(([k,v])=>`<button data-s="${k}" aria-pressed="${k===S.sec}">${v.label}</button>`).join('');
@@ -96,22 +105,26 @@ function render(){
  if(!isScad&&S.f!=='all')rows=rows.filter(r=>r.it.c===S.f);
  rows.sort(isScad?(a,b)=>a.it.date.localeCompare(b.it.date):isSto?(a,b)=>(b.it.doneDate||'').localeCompare(a.it.doneDate||''):(a,b)=>(b.it.p-a.it.p)||(a.it.date||'9').localeCompare(b.it.date||'9'));
  $('list').innerHTML=rows.length?rows.map(({it,i})=>{
+  if(S.ed===i)return editRow(it,i);
   if(isScad){const d=days(it.date),c=d<0?'red':d<=30?'amb':'ok';
    const st=d<0?`Scaduto da ${-d} g`:d===0?'Scade oggi':`Tra ${d} g`;
-   return `<li class="${c}"><span class="t">${esc(it.n)}<small>${fmt(it.date)}</small></span>${S.ren===i?`<span class="st"><input type="date" id="rd" aria-label="Nuova scadenza"></span><button class="rn" data-ok="${i}">Salva</button>`:`<span class="st">${st}</span>${d<0?`<button class="rn" data-ren="${i}">Rinnova</button>`:''}`}<button data-del="${i}" aria-label="Elimina">✕</button></li>`}
-  if(isSto)return `<li class="ok"><span class="t">${esc(it.n)}<small>${CATS[it.c]||''}${it.date?', prevista '+fmt(it.date):''}</small></span><label class="st">Eseguito il <input type="date" data-dd="${i}" value="${it.doneDate||''}"></label><button data-del="${i}" aria-label="Elimina">✕</button></li>`;
-  return `<li class="${it.p&&!it.done?'red':'ok'}${it.done?' done':''}"><input type="checkbox" data-chk="${i}" ${it.done?'checked':''} aria-label="Completato"><span class="t">${esc(it.n)}<small>${CATS[it.c]||''}${it.date?', prevista '+fmt(it.date):''}</small></span>${it.date&&days(it.date)<0?'<span class="st" style="color:var(--red)">In ritardo</span>':''}${it.p?'<span class="st">Urgente</span>':''}<button data-del="${i}" aria-label="Elimina">✕</button></li>`}).join('')
+   return `<li class="${c}"><span class="t" data-ed="${i}">${esc(it.n)}<small>${fmt(it.date)}</small></span>${S.ren===i?`<span class="st"><input type="date" id="rd" aria-label="Nuova scadenza"></span><button class="rn" data-ok="${i}">Salva</button>`:`<span class="st">${st}</span>${d<0?`<button class="rn" data-ren="${i}">Rinnova</button>`:''}`}<button data-del="${i}" aria-label="Elimina">✕</button></li>`}
+  if(isSto)return `<li class="ok"><span class="t" data-ed="${i}">${esc(it.n)}<small>${CATS[it.c]||''}${it.date?', prevista '+fmt(it.date):''}</small></span><label class="st">Eseguito il <input type="date" data-dd="${i}" value="${it.doneDate||''}"></label><button data-del="${i}" aria-label="Elimina">✕</button></li>`;
+  return `<li class="${it.p&&!it.done?'red':'ok'}${it.done?' done':''}"><input type="checkbox" data-chk="${i}" ${it.done?'checked':''} aria-label="Completato"><span class="t" data-ed="${i}">${esc(it.n)}<small>${CATS[it.c]||''}${it.date?', prevista '+fmt(it.date):''}</small></span>${it.date&&days(it.date)<0?'<span class="st" style="color:var(--red)">In ritardo</span>':''}${it.p?'<span class="st">Urgente</span>':''}<button data-del="${i}" aria-label="Elimina">✕</button></li>`}).join('')
   :`<li class="empty" style="display:block;border-left:1px dashed var(--line)">${isScad?(items.length?'Nessuna voce in questo stato.':'Nessuna scadenza. Aggiungine una qui sopra.'):isSto?'Nessun lavoro eseguito. Spunta un lavoro in Lavori da fare.':'Nessun lavoro. Aggiungine uno qui sopra.'}</li>`;
 }
 document.addEventListener('click',e=>{
- const t=e.target.closest('[data-sf],[data-sn]')||e.target;
- if(t.dataset.s){S.sec=t.dataset.s;S.ren=null;S.sf='all'}
+ const t=e.target.closest('[data-sf],[data-sn],[data-ed]')||e.target;
+ if(t.dataset.s){S.sec=t.dataset.s;S.ren=null;S.sf='all';S.ed=null}
  else if(t.dataset.sf){S.sf=S.sf===t.dataset.sf?'all':t.dataset.sf;S.ren=null}
- else if(t.dataset.sn){S.sec=t.dataset.sn;S.sf='all'}
+ else if(t.dataset.sn){S.sec=t.dataset.sn;S.sf='all';S.ed=null}
  else if(t.dataset.f){S.f=t.dataset.f}
+ else if(t.dataset.ed!==undefined){S.ed=+t.dataset.ed;S.ren=null}
+ else if(t.dataset.ec){S.ed=null}
+ else if(t.dataset.es!==undefined){const li=t.closest('li'),g=n=>{const x=li.querySelector(`[name=${n}]`);return x?x.value:undefined},it=S.data[K()][+t.dataset.es],nm=g('n').trim();if(!nm||(SEC[S.sec].scad&&!g('date')))return;it.n=nm;it.date=g('date')||'';if(g('c')!==undefined)it.c=g('c');if(g('p')!==undefined)it.p=+g('p');if(g('doneDate')!==undefined)it.doneDate=g('doneDate');S.ed=null;save()}
  else if(t.dataset.ren!==undefined){S.ren=+t.dataset.ren}
  else if(t.dataset.ok!==undefined){const v=$('rd').value;if(!v)return;S.data[K()][+t.dataset.ok].date=v;S.ren=null;save()}
- else if(t.dataset.del!==undefined){S.data[K()].splice(+t.dataset.del,1);S.ren=null;save()}
+ else if(t.dataset.del!==undefined){S.data[K()].splice(+t.dataset.del,1);S.ren=null;S.ed=null;save()}
  else return;
  render();
 });
