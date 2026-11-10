@@ -38,6 +38,8 @@ li.red{border-left-color:var(--red)}li.amb{border-left-color:var(--amb)}li.done{
 li button{border:0;background:none;color:var(--mute);font-size:1.2rem;cursor:pointer;padding:4px 8px}
 li input[type=checkbox]{width:22px;height:22px;accent-color:var(--acc)}
 .st input{padding:4px;border:1px solid var(--line);border-radius:6px;background:var(--bg);color:var(--ink);font:inherit;max-width:150px}
+.sum [data-sf],.sum [data-sn]{cursor:pointer}
+.sum [aria-pressed="true"]{outline:2px solid var(--acc)}
 li button.rn{border:1px solid var(--acc);background:var(--acc);color:var(--acc-ink);font-size:.85rem;font-weight:600;border-radius:6px;padding:6px 10px}
 .empty{color:var(--mute);padding:18px;text-align:center;border:1px dashed var(--line);border-radius:8px}
 .foot{display:flex;gap:8px;margin-top:20px;flex-wrap:wrap}
@@ -83,14 +85,14 @@ function render(){
  $('flt').innerHTML=isScad?'':[['all','Tutti'],...Object.entries(CATS)].map(([k,v])=>`<button data-f="${k}" aria-pressed="${k===S.f}">${v}</button>`).join('');
  let sum='';
  if(isScad){const c={red:0,amb:0,ok:0};items.forEach(i=>{const d=days(i.date);c[d<0?'red':d<=30?'amb':'ok']++});
-  sum=`<div class="r"><b>${c.red}</b>scaduti</div><div class="a"><b>${c.amb}</b>entro 30 giorni</div><div class="o"><b>${c.ok}</b>in regola</div>`}
- else if(isSto){sum=`<div class="o"><b>${items.filter(i=>i.done).length}</b>lavori eseguiti</div>`}else{const n=items.filter(i=>!i.done).length;sum=`<div><b>${n}</b>da fare</div><div class="o"><b>${items.length-n}</b>completati</div>`}
+  sum=`<div class="r" data-sf="red" role="button" tabindex="0" aria-pressed="${S.sf==='red'}"><b>${c.red}</b>scaduti</div><div class="a" data-sf="amb" role="button" tabindex="0" aria-pressed="${S.sf==='amb'}"><b>${c.amb}</b>entro 30 giorni</div><div class="o" data-sf="ok" role="button" tabindex="0" aria-pressed="${S.sf==='ok'}"><b>${c.ok}</b>in regola</div>`}
+ else if(isSto){sum=`<div class="o" aria-pressed="true"><b>${items.filter(i=>i.done).length}</b>lavori eseguiti</div><div data-sn="lav" role="button" tabindex="0"><b>${items.filter(i=>!i.done).length}</b>da fare</div>`}else{const n=items.filter(i=>!i.done).length;sum=`<div aria-pressed="true"><b>${n}</b>da fare</div><div class="o" data-sn="sto" role="button" tabindex="0"><b>${items.length-n}</b>completati</div>`}
  $('sum').innerHTML=sum;
  $('f').style.display=isSto?'none':'';
  $('f').innerHTML=isScad
   ?`<input name="n" list="sg" placeholder="${sec.ph}" required aria-label="Nome"><datalist id="sg">${sec.sug.map(s=>`<option value="${esc(s)}">`).join('')}</datalist><input name="d" type="date" required aria-label="Data di scadenza"><button>Aggiungi scadenza</button>`
   :`<input name="n" placeholder="${sec.ph}" required aria-label="Lavoro"><input name="d" type="date" aria-label="Data prevista"><select name="c" aria-label="Categoria">${Object.entries(CATS).map(([k,v])=>`<option value="${k}">${v}</option>`).join('')}</select><select name="p" aria-label="Priorità"><option value="0">Normale</option><option value="1">Urgente</option></select><button>Aggiungi lavoro</button>`;
- let rows=items.map((it,i)=>({it,i})).filter(r=>isScad||!!r.it.done===isSto);
+ let rows=items.map((it,i)=>({it,i})).filter(r=>isScad?(!S.sf||S.sf==='all'||(S.sf==='red'?days(r.it.date)<0:S.sf==='amb'?days(r.it.date)>=0&&days(r.it.date)<=30:days(r.it.date)>30)):!!r.it.done===isSto);
  if(!isScad&&S.f!=='all')rows=rows.filter(r=>r.it.c===S.f);
  rows.sort(isScad?(a,b)=>a.it.date.localeCompare(b.it.date):isSto?(a,b)=>(b.it.doneDate||'').localeCompare(a.it.doneDate||''):(a,b)=>(b.it.p-a.it.p)||(a.it.date||'9').localeCompare(b.it.date||'9'));
  $('list').innerHTML=rows.length?rows.map(({it,i})=>{
@@ -99,11 +101,13 @@ function render(){
    return `<li class="${c}"><span class="t">${esc(it.n)}<small>${fmt(it.date)}</small></span>${S.ren===i?`<span class="st"><input type="date" id="rd" aria-label="Nuova scadenza"></span><button class="rn" data-ok="${i}">Salva</button>`:`<span class="st">${st}</span>${d<0?`<button class="rn" data-ren="${i}">Rinnova</button>`:''}`}<button data-del="${i}" aria-label="Elimina">✕</button></li>`}
   if(isSto)return `<li class="ok"><span class="t">${esc(it.n)}<small>${CATS[it.c]||''}${it.date?', prevista '+fmt(it.date):''}</small></span><label class="st">Eseguito il <input type="date" data-dd="${i}" value="${it.doneDate||''}"></label><button data-del="${i}" aria-label="Elimina">✕</button></li>`;
   return `<li class="${it.p&&!it.done?'red':'ok'}${it.done?' done':''}"><input type="checkbox" data-chk="${i}" ${it.done?'checked':''} aria-label="Completato"><span class="t">${esc(it.n)}<small>${CATS[it.c]||''}${it.date?', prevista '+fmt(it.date):''}</small></span>${it.date&&days(it.date)<0?'<span class="st" style="color:var(--red)">In ritardo</span>':''}${it.p?'<span class="st">Urgente</span>':''}<button data-del="${i}" aria-label="Elimina">✕</button></li>`}).join('')
-  :`<li class="empty" style="display:block;border-left:1px dashed var(--line)">${isScad?'Nessuna scadenza. Aggiungine una qui sopra.':isSto?'Nessun lavoro eseguito. Spunta un lavoro in Lavori da fare.':'Nessun lavoro. Aggiungine uno qui sopra.'}</li>`;
+  :`<li class="empty" style="display:block;border-left:1px dashed var(--line)">${isScad?(items.length?'Nessuna voce in questo stato.':'Nessuna scadenza. Aggiungine una qui sopra.'):isSto?'Nessun lavoro eseguito. Spunta un lavoro in Lavori da fare.':'Nessun lavoro. Aggiungine uno qui sopra.'}</li>`;
 }
 document.addEventListener('click',e=>{
- const t=e.target;
- if(t.dataset.s){S.sec=t.dataset.s;S.ren=null}
+ const t=e.target.closest('[data-sf],[data-sn]')||e.target;
+ if(t.dataset.s){S.sec=t.dataset.s;S.ren=null;S.sf='all'}
+ else if(t.dataset.sf){S.sf=S.sf===t.dataset.sf?'all':t.dataset.sf;S.ren=null}
+ else if(t.dataset.sn){S.sec=t.dataset.sn;S.sf='all'}
  else if(t.dataset.f){S.f=t.dataset.f}
  else if(t.dataset.ren!==undefined){S.ren=+t.dataset.ren}
  else if(t.dataset.ok!==undefined){const v=$('rd').value;if(!v)return;S.data[K()][+t.dataset.ok].date=v;S.ren=null;save()}
