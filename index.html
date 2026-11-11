@@ -42,6 +42,9 @@ form input,form select{flex:1 1 150px;padding:11px 12px;border:1px solid var(--l
 form button{flex:1 1 100%;padding:12px;border:0;border-radius:10px;background:var(--acc);color:var(--on);font:inherit;font-weight:700;cursor:pointer}
 .addb{display:none;width:100%;padding:13px;margin:0 0 16px;border:0;border-radius:12px;background:var(--acc);color:var(--on);font:inherit;font-weight:700;font-size:1rem;cursor:pointer}
 form button.ghost{background:none;color:var(--mute);border:1px solid var(--line)}
+li.neu{box-shadow:inset 3px 0 0 var(--line)}
+li.grp{background:none;border:0;box-shadow:none;padding:12px 2px 0;font-size:.72rem;font-weight:800;text-transform:uppercase;letter-spacing:.06em;color:var(--mute)}
+.eng .rs{margin-left:auto;padding:6px 12px;border:1px solid var(--line);background:none;color:var(--mute);border-radius:999px;font:inherit;font-weight:600;font-size:.8rem;cursor:pointer}
 ul{list-style:none;margin:0;padding:0;display:grid;gap:10px}
 li{display:flex;flex-wrap:wrap;align-items:center;gap:12px;background:var(--card);border:1px solid var(--line);border-radius:14px;padding:13px 14px;box-shadow:inset 3px 0 0 var(--ok)}
 li.red{box-shadow:inset 3px 0 0 var(--red)}
@@ -93,16 +96,30 @@ const SEC={
  doc:{label:'Scadenze Documenti',scad:1,ph:'Es. Assicurazione',sug:['Assicurazione RC','Licenza di navigazione','Certificato di sicurezza','Patente nautica','Bollo / tassa di stazionamento','Contratto di ormeggio','Certificato d’uso motore']},
  dot:{label:'Scadenze dotazioni di Bordo',scad:1,ph:'Es. Razzi di segnalamento',sug:['Razzi di segnalamento','Estintori','Zattera di salvataggio','Giubbotti di salvataggio','EPIRB','Cassetta di pronto soccorso','Boetta / salvagente anulare']},
  lav:{label:'Lavori da fare',ph:'Es. Cambio olio e filtri'},
- sto:{label:'Storico lavori',sto:1}
+ sto:{label:'Storico lavori',sto:1},
+ chk:{label:'Checklist prima della partenza',chk:1}
 };
 const CATS={ele:'Impianto elettrico',sca:'Manutenzione scafo',mot:'Manutenzione motore'};
-const SH={doc:'Documenti',dot:'Dotazioni',lav:'Da fare',sto:'Storico'};
-const HINT={doc:'Tocca una voce per modificarla.',dot:'Tocca una voce per modificarla.',lav:'Spunta un lavoro quando è fatto: finisce nello storico.',sto:'Tocca un lavoro per aggiungere note e costo.'};
-const ICO={doc:'<path d="M6 3h8l4 4v14H6z"/><path d="M14 3v4h4M9 12h6M9 16h6"/>',dot:'<circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="4"/><path d="M5.6 5.6l3.6 3.6M14.8 14.8l3.6 3.6M18.4 5.6l-3.6 3.6M9.2 14.8l-3.6 3.6"/>',lav:'<path d="M14.7 6.3a4 4 0 0 0-5 5L3 18l3 3 6.7-6.7a4 4 0 0 0 5-5l-2.5 2.5-2.4-.6-.6-2.4z"/>',sto:'<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/>'};
+const DEF=[['Documenti e sicurezza','Documenti di bordo e patente nautica a bordo'],['Documenti e sicurezza','Assicurazione in corso di validità'],['Documenti e sicurezza','Giubbotti di salvataggio per tutti a bordo'],['Documenti e sicurezza','Razzi, estintori e cassetta di pronto soccorso presenti'],['Documenti e sicurezza','Telefono e VHF carichi'],
+['Meteo e piano','Controllato meteo e stato del mare'],['Meteo e piano','Deciso percorso e orario di rientro'],['Meteo e piano','Avvisata una persona a terra'],['Meteo e piano','Spiegate all’equipaggio le dotazioni e l’uomo a mare'],
+['Motore','Livello olio controllato'],['Motore','Carburante sufficiente (un terzo andata, un terzo ritorno, un terzo riserva)'],['Motore','Vano motore ventilato prima dell’avviamento'],['Motore','Acqua di raffreddamento in uscita dallo scarico'],['Motore','Prese a mare aperte (dove previsto)'],
+['Impianto elettrico','Batterie cariche e staccabatteria inserito'],['Impianto elettrico','Luci di navigazione funzionanti'],['Impianto elettrico','Strumenti accesi (GPS, plotter, VHF)'],['Impianto elettrico','Pompa di sentina funzionante'],
+['Scafo e ormeggio','Sentina asciutta'],['Scafo e ormeggio','Ancora e cima pronte'],['Scafo e ormeggio','Cime d’ormeggio e parabordi sistemati'],['Scafo e ormeggio','Tappi e valvole nella posizione giusta']];
+const VELA=[['Vele e armo','Albero, sartiame e stralli controllati a vista (tenditori, copiglie)'],['Vele e armo','Drizze, scotte e sagole libere, senza nodi né usura'],['Vele e armo','Randa e fiocco pronti da armare, avvolgifiocco che gira bene'],['Vele e armo','Winch e maniglie a bordo'],['Vele e armo','Boma bloccato prima di muoversi'],['Vele e armo','Deciso in anticipo quando ridurre la vela (mano di terzaroli)'],
+['Documenti e sicurezza','Cinture e sagole di sicurezza a bordo'],['Documenti e sicurezza','Spiegato all’equipaggio come manovrare e quando ridurre la vela'],['Documenti e sicurezza','Battagliole e lande controllate'],
+['Meteo e piano','Valutata la forza del vento e le raffiche previste'],['Meteo e piano','Percorso scelto in base alla direzione del vento'],
+['Motore','Elica libera da cime e reti prima dell’avviamento'],['Motore','Motore ausiliario provato, anche se si naviga a vela'],
+['Impianto elettrico','Luce di testa d’albero e luci di via funzionanti'],['Impianto elettrico','Strumenti del vento e della velocità accesi'],
+['Scafo e ormeggio','Timone e barra (o ruota) liberi di muoversi'],['Scafo e ormeggio','Ancora e catena pronte, con lunghezza adeguata alla profondità']];
+const GR=['Documenti e sicurezza','Meteo e piano','Vele e armo','Motore','Impianto elettrico','Scafo e ormeggio'];
+const SH={doc:'Documenti',dot:'Dotazioni',lav:'Da fare',sto:'Storico',chk:'Checklist'};
+const HINT={doc:'Tocca una voce per modificarla.',dot:'Tocca una voce per modificarla.',lav:'Spunta un lavoro quando è fatto: finisce nello storico.',sto:'Tocca un lavoro per aggiungere note e costo.',chk:'Spunta le voci prima di uscire. Con «Azzera spunte» prepari la lista per la prossima uscita.'};
+const ICO={doc:'<path d="M6 3h8l4 4v14H6z"/><path d="M14 3v4h4M9 12h6M9 16h6"/>',dot:'<circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="4"/><path d="M5.6 5.6l3.6 3.6M14.8 14.8l3.6 3.6M18.4 5.6l-3.6 3.6M9.2 14.8l-3.6 3.6"/>',lav:'<path d="M14.7 6.3a4 4 0 0 0-5 5L3 18l3 3 6.7-6.7a4 4 0 0 0 5-5l-2.5 2.5-2.4-.6-.6-2.4z"/>',sto:'<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/>',chk:'<path d="M9 6h11M9 12h11M9 18h11"/><path d="M3.5 6l1.5 1.5L7 5M3.5 12l1.5 1.5L7 11M3.5 18l1.5 1.5L7 17"/>'};
 let S={sec:'doc',f:'all',data:{}};
 const KEY='barca-v1';
 try{const r=localStorage.getItem(KEY);if(r)S.data=JSON.parse(r)||{}}catch(e){}
 if(!S.data.lav){S.data.lav=[];for(const c in CATS)(S.data[c]||[]).forEach(i=>S.data.lav.push({...i,c}))}
+const initChk=()=>{if(!S.data.chk)S.data.chk=DEF.map(([g,n])=>({n,g,ok:false}));if(!S.data.vela){S.data.vela=1;VELA.forEach(([g,n])=>{if(!S.data.chk.some(i=>i.n===n))S.data.chk.push({n,g,ok:false})})}};initChk();
 const K=()=>S.sec==='sto'?'lav':S.sec;
 const save=()=>{try{localStorage.setItem(KEY,JSON.stringify(S.data))}catch(e){}};
 const $=id=>document.getElementById(id);
@@ -115,9 +132,16 @@ const addM=(s,n)=>{const d=new Date(s+'T00:00:00');d.setMonth(d.getMonth()+n);re
 const eur=x=>(+x).toLocaleString('it-IT',{style:'currency',currency:'EUR'});
 const bd=k=>{const n=(S.data[k]||[]).filter(i=>i.date&&!i.done&&days(i.date)<0).length;return n?`<em class="bd">${n>99?'99+':n}</em>`:''};
 function engCard(items){
+ if(S.sec==='chk'){const ds=(S.data.dot||[]).filter(i=>days(i.date)<0).length,dc=(S.data.doc||[]).filter(i=>days(i.date)<0).length,all=items.length&&items.every(i=>i.ok);let m='';if(dc)m+=`<b style="color:var(--red)">${dc} ${dc===1?'documento scaduto':'documenti scaduti'}</b>`;if(ds)m+=`<b style="color:var(--red)">${ds} ${ds===1?'dotazione scaduta':'dotazioni scadute'}</b>`;if(!m)m=all?'<b style="color:var(--ok)">Tutto pronto per partire ✓</b>':'<span>Documenti e dotazioni in regola</span>';return m+'<button class="rs" data-reset="1">Azzera spunte</button>'}
  if(S.sec==='sto'){const tot={};items.forEach(i=>{if(i.done&&i.cost){const y=(i.doneDate||'').slice(0,4)||'senza data';tot[y]=(tot[y]||0)+(+i.cost)}});const ys=Object.keys(tot).sort().reverse();return ys.length?'<b>Spese per anno</b>'+ys.map(y=>`<span>${y}: <b>${eur(tot[y])}</b></span>`).join(''):''}
  return ''}
+const grpOpts=sel=>[...new Set([...GR,...(S.data.chk||[]).map(i=>i.g)])].map(g=>`<option${g===sel?' selected':''}>${esc(g)}</option>`).join('');
+function chkList(items){
+ if(!items.length)return '<li class="empty" style="display:block">Nessuna voce. Aggiungine una qui sopra.</li>';
+ const gs=GR.filter(g=>items.some(i=>i.g===g));items.forEach(i=>{if(!gs.includes(i.g))gs.push(i.g)});
+ return gs.map(g=>`<li class="grp">${esc(g)}</li>`+items.map((it,i)=>it.g!==g?'':(S.ed===i?editRow(it,i):`<li class="${it.ok?'ok':'neu'}"><input type="checkbox" data-ck="${i}" ${it.ok?'checked':''} aria-label="Fatto"><span class="t" data-ed="${i}">${esc(it.n)}</span><button data-del="${i}" aria-label="Elimina">✕</button></li>`)).join('')).join('')}
 function editRow(it,i){
+ if(S.sec==='chk')return `<li class="ok" style="flex-wrap:wrap"><input name="n" value="${esc(it.n)}" aria-label="Voce" style="flex:1 1 100%"><select name="g" aria-label="Gruppo">${grpOpts(it.g)}</select><button class="rn" data-es="${i}">Salva</button><button data-ec="1" style="font-size:.9rem">Annulla</button></li>`;
  const sc=!!SEC[S.sec].scad,sto=S.sec==='sto',lb=(t,x)=>`<label style="color:var(--mute);font-size:.85rem">${t} ${x}</label>`;
  let h=`<li class="ok" style="flex-wrap:wrap"><input name="n" value="${esc(it.n)}" aria-label="Nome" style="flex:1 1 100%">`;
  h+=lb(sc?'Scadenza':'Prevista',`<input name="date" type="date" value="${it.date||''}">`);
@@ -126,19 +150,20 @@ function editRow(it,i){
  if(!sc)h+=`<input name="by" value="${esc(it.by||'')}" placeholder="Eseguito da" aria-label="Eseguito da" style="flex:1 1 120px"><input name="cost" type="number" step="0.01" min="0" inputmode="decimal" value="${it.cost||''}" placeholder="Costo €" aria-label="Costo in euro" style="flex:1 1 100px"><input name="note" value="${esc(it.note||'')}" placeholder="Note / ricambi usati" aria-label="Note" style="flex:1 1 100%">`;
  return h+`<button class="rn" data-es="${i}">Salva</button><button data-ec="1" style="font-size:.9rem">Annulla</button></li>`}
 function render(){
- const sec=SEC[S.sec],isScad=!!sec.scad,isSto=!!sec.sto,key=K(),items=(S.data[key]=S.data[key]||[]);
+ const sec=SEC[S.sec],isScad=!!sec.scad,isSto=!!sec.sto,isChk=!!sec.chk,key=K(),items=(S.data[key]=S.data[key]||[]);
  $('menu').innerHTML=Object.entries(SEC).map(([k,v])=>`<button data-s="${k}" aria-pressed="${k===S.sec}"><svg viewBox="0 0 24 24" aria-hidden="true">${ICO[k]}</svg>${bd(k)}<span>${SH[k]}</span></button>`).join('');$('stitle').textContent=sec.label;$('hint').textContent=HINT[S.sec];
- $('flt').innerHTML=isScad?'':[['all','Tutti'],...Object.entries(CATS)].map(([k,v])=>`<button data-f="${k}" aria-pressed="${k===S.f}">${v}</button>`).join('');
+ $('flt').innerHTML=(isScad||isChk)?'':[['all','Tutti'],...Object.entries(CATS)].map(([k,v])=>`<button data-f="${k}" aria-pressed="${k===S.f}">${v}</button>`).join('');
  let sum='';
  if(isScad){const c={red:0,amb:0,ok:0};items.forEach(i=>{const d=days(i.date);c[d<0?'red':d<=30?'amb':'ok']++});
   sum=`<div class="r" data-sf="red" role="button" tabindex="0" aria-pressed="${S.sf==='red'}"><b>${c.red}</b>scaduti</div><div class="a" data-sf="amb" role="button" tabindex="0" aria-pressed="${S.sf==='amb'}"><b>${c.amb}</b>entro 30 giorni</div><div class="o" data-sf="ok" role="button" tabindex="0" aria-pressed="${S.sf==='ok'}"><b>${c.ok}</b>in regola</div>`}
- else if(isSto){sum=`<div class="o" aria-pressed="true"><b>${items.filter(i=>i.done).length}</b>lavori eseguiti</div><div data-sn="lav" role="button" tabindex="0"><b>${items.filter(i=>!i.done).length}</b>da fare</div>`}else{const n=items.filter(i=>!i.done).length;sum=`<div aria-pressed="true"><b>${n}</b>da fare</div><div class="o" data-sn="sto" role="button" tabindex="0"><b>${items.length-n}</b>completati</div>`}
+ else if(isChk){const d=items.filter(i=>i.ok).length;sum=`<div class="${d===items.length&&items.length?'o':''}"><b>${d}/${items.length}</b>voci spuntate</div><div><b>${items.length-d}</b>da controllare</div>`}else if(isSto){sum=`<div class="o" aria-pressed="true"><b>${items.filter(i=>i.done).length}</b>lavori eseguiti</div><div data-sn="lav" role="button" tabindex="0"><b>${items.filter(i=>!i.done).length}</b>da fare</div>`}else{const n=items.filter(i=>!i.done).length;sum=`<div aria-pressed="true"><b>${n}</b>da fare</div><div class="o" data-sn="sto" role="button" tabindex="0"><b>${items.length-n}</b>completati</div>`}
  $('sum').innerHTML=sum;
  $('eng').innerHTML=engCard(items);
- $('f').style.display=(isSto||!S.add)?'none':'';$('addb').style.display=(!isSto&&!S.add)?'block':'none';$('addb').textContent=isScad?'+ Aggiungi scadenza':'+ Aggiungi lavoro';
- $('f').innerHTML=isScad
+ $('f').style.display=(isSto||!S.add)?'none':'';$('addb').style.display=(!isSto&&!S.add)?'block':'none';$('addb').textContent=isChk?'+ Aggiungi voce':isScad?'+ Aggiungi scadenza':'+ Aggiungi lavoro';
+ $('f').innerHTML=isChk?`<input name="n" placeholder="Es. Controllare le cime" required aria-label="Voce"><select name="g" aria-label="Gruppo">${grpOpts()}</select><button>Aggiungi voce</button><button type="button" class="ghost" data-addc="1">Annulla</button>`:isScad
   ?`<input name="n" list="sg" placeholder="${sec.ph}" required aria-label="Nome"><datalist id="sg">${sec.sug.map(s=>`<option value="${esc(s)}">`).join('')}</datalist><input name="d" type="date" required aria-label="Data di scadenza"><button>Aggiungi scadenza</button><button type="button" class="ghost" data-addc="1">Annulla</button>`
   :`<input name="n" placeholder="${sec.ph}" required aria-label="Lavoro"><input name="d" type="date" aria-label="Data prevista"><select name="c" aria-label="Categoria">${Object.entries(CATS).map(([k,v])=>`<option value="${k}">${v}</option>`).join('')}</select><select name="p" aria-label="Priorità"><option value="0">Normale</option><option value="1">Urgente</option></select><input name="rn" type="number" min="1" placeholder="Ripeti ogni… mesi (opz.)" aria-label="Ripeti ogni (mesi)"><input type="hidden" name="ru" value="m"><button>Aggiungi lavoro</button><button type="button" class="ghost" data-addc="1">Annulla</button>`;
+ if(isChk){$('list').innerHTML=chkList(items);return}
  let rows=items.map((it,i)=>({it,i})).filter(r=>isScad?(!S.sf||S.sf==='all'||(S.sf==='red'?days(r.it.date)<0:S.sf==='amb'?days(r.it.date)>=0&&days(r.it.date)<=30:days(r.it.date)>30)):!!r.it.done===isSto);
  if(!isScad&&S.f!=='all')rows=rows.filter(r=>r.it.c===S.f);
  rows.sort(isScad?(a,b)=>a.it.date.localeCompare(b.it.date):isSto?(a,b)=>(b.it.doneDate||'').localeCompare(a.it.doneDate||''):(a,b)=>(b.it.p-a.it.p)||(a.it.date||'9').localeCompare(b.it.date||'9'));
@@ -159,11 +184,12 @@ document.addEventListener('click',e=>{
  else if(t.dataset.f){S.f=t.dataset.f}
  else if(t.dataset.add){S.add=true;render();const n=document.querySelector('#f [name=n]');if(n)n.focus();return}
  else if(t.dataset.addc){S.add=false}
+ else if(t.dataset.reset){S.data.chk.forEach(i=>i.ok=false);save()}
  else if(t.dataset.qy){const it=S.data[K()][S.ren],r=$('rd');if(it&&r)r.value=addY(it.date,+t.dataset.qy);return}
  else if(t.dataset.eng){const v=parseFloat($('eh').value);if(isNaN(v))return;S.data.eng={h:v,d:iso(new Date())};save()}
  else if(t.dataset.ed!==undefined){S.ed=+t.dataset.ed;S.ren=null}
  else if(t.dataset.ec){S.ed=null}
- else if(t.dataset.es!==undefined){const li=t.closest('li'),g=n=>{const x=li.querySelector(`[name=${n}]`);return x?x.value:undefined},it=S.data[K()][+t.dataset.es],nm=g('n').trim();if(!nm||(SEC[S.sec].scad&&!g('date')))return;it.n=nm;it.date=g('date')||'';if(g('c')!==undefined)it.c=g('c');if(g('p')!==undefined)it.p=+g('p');if(g('doneDate')!==undefined)it.doneDate=g('doneDate');if(g('by')!==undefined){it.by=g('by').trim();it.note=g('note').trim();it.cost=+g('cost')||0}S.ed=null;save()}
+ else if(t.dataset.es!==undefined){const li=t.closest('li'),g=n=>{const x=li.querySelector(`[name=${n}]`);return x?x.value:undefined},it=S.data[K()][+t.dataset.es],nm=g('n').trim();if(!nm||(SEC[S.sec].scad&&!g('date')))return;it.n=nm;it.date=g('date')||'';if(g('c')!==undefined)it.c=g('c');if(g('g')!==undefined)it.g=g('g');if(g('p')!==undefined)it.p=+g('p');if(g('doneDate')!==undefined)it.doneDate=g('doneDate');if(g('by')!==undefined){it.by=g('by').trim();it.note=g('note').trim();it.cost=+g('cost')||0}S.ed=null;save()}
  else if(t.dataset.ren!==undefined){S.ren=+t.dataset.ren}
  else if(t.dataset.ok!==undefined){const v=$('rd').value;if(!v)return;S.data[K()][+t.dataset.ok].date=v;S.ren=null;save()}
  else if(t.dataset.del!==undefined){S.data[K()].splice(+t.dataset.del,1);S.ren=null;S.ed=null;save()}
@@ -174,12 +200,13 @@ document.addEventListener('change',e=>{
  const t=e.target;
  if(t.dataset.chk!==undefined){const w=S.data[K()][+t.dataset.chk];w.done=t.checked;w.doneDate=t.checked?new Date().toLocaleDateString('sv-SE'):'';if(t.checked&&w.rn&&!w.next){w.next=1;const e=(S.data.eng||{}).h||0;S.data[K()].push({n:w.n,c:w.c,p:w.p,done:false,rn:w.rn,ru:w.ru,date:w.ru==='m'?addM(w.doneDate,w.rn):'',dh:w.ru==='h'?e+w.rn:0})}save();render()}
  if(t.dataset.dd!==undefined){S.data[K()][+t.dataset.dd].doneDate=t.value;save()}
+ if(t.dataset.ck!==undefined){S.data.chk[+t.dataset.ck].ok=t.checked;save();render()}
 });
 $('f').addEventListener('submit',e=>{
  e.preventDefault();S.add=false;
  const f=new FormData($('f')),n=f.get('n').trim();
  if(!n)return;
- (S.data[S.sec]=S.data[S.sec]||[]).push(SEC[S.sec].scad?{n,date:f.get('d')}:(()=>{const rn=+f.get('rn')||0,ru=f.get('ru'),e=(S.data.eng||{}).h||0;return{n,date:f.get('d')||'',c:f.get('c'),p:+f.get('p'),done:false,rn,ru,dh:rn&&ru==='h'?e+rn:0}})());
+ (S.data[S.sec]=S.data[S.sec]||[]).push(SEC[S.sec].chk?{n,g:f.get('g'),ok:false}:SEC[S.sec].scad?{n,date:f.get('d')}:(()=>{const rn=+f.get('rn')||0,ru=f.get('ru'),e=(S.data.eng||{}).h||0;return{n,date:f.get('d')||'',c:f.get('c'),p:+f.get('p'),done:false,rn,ru,dh:rn&&ru==='h'?e+rn:0}})());
  save();render();
 });
 $('exp').onclick=()=>{
@@ -190,7 +217,7 @@ $('exp').onclick=()=>{
 $('impb').onclick=()=>$('imp').click();
 $('imp').onchange=e=>{
  const r=new FileReader();
- r.onload=()=>{try{S.data=JSON.parse(r.result)||{};save();render()}catch(x){alert('File non valido.')}};
+ r.onload=()=>{try{S.data=JSON.parse(r.result)||{};initChk();save();render()}catch(x){alert('File non valido.')}};
  if(e.target.files[0])r.readAsText(e.target.files[0]);
 };
 render();
