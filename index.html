@@ -90,7 +90,7 @@ button:focus-visible,input:focus-visible,select:focus-visible{outline:2px solid 
 <ul id="list"></ul>
 <div class="foot">
 <button id="exp">Esporta backup</button>
-<button type="button" id="impb">Importa backup</button><input id="imp" type="file" accept=".json" hidden>
+<button type="button" id="impb">Importa backup</button><input id="imp" type="file" accept="application/json,.json,text/plain" hidden>
 </div>
 </main>
 <nav id="menu"></nav>
@@ -213,10 +213,17 @@ $('f').addEventListener('submit',e=>{
  (S.data[S.sec]=S.data[S.sec]||[]).push(SEC[S.sec].chk?{n,g:f.get('g'),ok:false}:SEC[S.sec].scad?{n,date:f.get('d')}:(()=>{const rn=+f.get('rn')||0,ru=f.get('ru'),e=(S.data.eng||{}).h||0;return{n,date:f.get('d')||'',c:f.get('c'),p:+f.get('p'),done:false,rn,ru,dh:rn&&ru==='h'?e+rn:0}})());
  save();render();
 });
-$('exp').onclick=()=>{
- const a=document.createElement('a');
- a.href='data:application/json;charset=utf-8,'+encodeURIComponent(JSON.stringify(S.data,null,1));
- a.download='barca-backup.json';a.click();
+$('exp').onclick=async()=>{
+ const txt=JSON.stringify(S.data,null,1),name='barca-backup.json';
+ try{
+  const f=new File([txt],name,{type:'application/json'});
+  if(matchMedia('(pointer:coarse)').matches&&navigator.canShare&&navigator.canShare({files:[f]})){await navigator.share({files:[f],title:'Backup Boat Journal'});return}
+ }catch(e){if(e&&e.name==='AbortError')return}
+ try{
+  const u=URL.createObjectURL(new Blob([txt],{type:'application/json'})),a=document.createElement('a');
+  a.href=u;a.download=name;document.body.appendChild(a);a.click();a.remove();
+  setTimeout(()=>URL.revokeObjectURL(u),4000);
+ }catch(e){alert('Non riesco a creare il file di backup su questo dispositivo.')}
 };
 $('impb').onclick=()=>$('imp').click();
 $('imp').onchange=e=>{
