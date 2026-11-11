@@ -44,6 +44,9 @@ form button{flex:1 1 100%;padding:12px;border:0;border-radius:10px;background:va
 form button.ghost{background:none;color:var(--mute);border:1px solid var(--line)}
 li.neu{box-shadow:inset 3px 0 0 var(--line)}
 li.grp{background:none;border:0;box-shadow:none;padding:12px 2px 0;font-size:.72rem;font-weight:800;text-transform:uppercase;letter-spacing:.06em;color:var(--mute)}
+.eng label{font-weight:700;color:var(--ink)}
+.eng input{width:92px;padding:7px 9px;border:1px solid var(--line);border-radius:8px;background:var(--bg);color:var(--ink);font:inherit}
+.eng button[data-eng]{padding:7px 14px;border:0;border-radius:999px;background:var(--acc);color:var(--on);font:inherit;font-weight:700;font-size:.82rem;cursor:pointer}
 .eng .rs{margin-left:auto;padding:6px 12px;border:1px solid var(--line);background:none;color:var(--mute);border-radius:999px;font:inherit;font-weight:600;font-size:.8rem;cursor:pointer}
 ul{list-style:none;margin:0;padding:0;display:grid;gap:10px}
 li{display:flex;flex-wrap:wrap;align-items:center;gap:12px;background:var(--card);border:1px solid var(--line);border-radius:14px;padding:13px 14px;box-shadow:inset 3px 0 0 var(--ok)}
@@ -130,8 +133,9 @@ const iso=d=>d.toLocaleDateString('sv-SE');
 const addY=(s,n)=>{const d=new Date(s+'T00:00:00');d.setFullYear(d.getFullYear()+n);const t=new Date();return iso(d<t?new Date(t.getFullYear()+n,t.getMonth(),t.getDate()):d)};
 const addM=(s,n)=>{const d=new Date(s+'T00:00:00');d.setMonth(d.getMonth()+n);return iso(d)};
 const eur=x=>(+x).toLocaleString('it-IT',{style:'currency',currency:'EUR'});
-const bd=k=>{const n=(S.data[k]||[]).filter(i=>i.date&&!i.done&&days(i.date)<0).length;return n?`<em class="bd">${n>99?'99+':n}</em>`:''};
+const bd=k=>{const n=(S.data[k]||[]).filter(i=>!i.done&&((i.date&&days(i.date)<0)||(k==='lav'&&i.dh&&((S.data.eng||{}).h||0)>=i.dh))).length;return n?`<em class="bd">${n>99?'99+':n}</em>`:''};
 function engCard(items){
+ if(S.sec==='lav'){const e=S.data.eng||{};return `<label for="eh">Ore motore</label><input id="eh" type="number" min="0" step="0.1" inputmode="decimal" value="${e.h??''}"><button data-eng="1">Aggiorna</button><small>${e.d?'aggiornate il '+fmt(e.d):'non ancora inserite'}</small>`}
  if(S.sec==='chk'){const ds=(S.data.dot||[]).filter(i=>days(i.date)<0).length,dc=(S.data.doc||[]).filter(i=>days(i.date)<0).length,all=items.length&&items.every(i=>i.ok);let m='';if(dc)m+=`<b style="color:var(--red)">${dc} ${dc===1?'documento scaduto':'documenti scaduti'}</b>`;if(ds)m+=`<b style="color:var(--red)">${ds} ${ds===1?'dotazione scaduta':'dotazioni scadute'}</b>`;if(!m)m=all?'<b style="color:var(--ok)">Tutto pronto per partire ✓</b>':'<span>Documenti e dotazioni in regola</span>';return m+'<button class="rs" data-reset="1">Azzera spunte</button>'}
  if(S.sec==='sto'){const tot={};items.forEach(i=>{if(i.done&&i.cost){const y=(i.doneDate||'').slice(0,4)||'senza data';tot[y]=(tot[y]||0)+(+i.cost)}});const ys=Object.keys(tot).sort().reverse();return ys.length?'<b>Spese per anno</b>'+ys.map(y=>`<span>${y}: <b>${eur(tot[y])}</b></span>`).join(''):''}
  return ''}
@@ -162,7 +166,7 @@ function render(){
  $('f').style.display=(isSto||!S.add)?'none':'';$('addb').style.display=(!isSto&&!S.add)?'block':'none';$('addb').textContent=isChk?'+ Aggiungi voce':isScad?'+ Aggiungi scadenza':'+ Aggiungi lavoro';
  $('f').innerHTML=isChk?`<input name="n" placeholder="Es. Controllare le cime" required aria-label="Voce"><select name="g" aria-label="Gruppo">${grpOpts()}</select><button>Aggiungi voce</button><button type="button" class="ghost" data-addc="1">Annulla</button>`:isScad
   ?`<input name="n" list="sg" placeholder="${sec.ph}" required aria-label="Nome"><datalist id="sg">${sec.sug.map(s=>`<option value="${esc(s)}">`).join('')}</datalist><input name="d" type="date" required aria-label="Data di scadenza"><button>Aggiungi scadenza</button><button type="button" class="ghost" data-addc="1">Annulla</button>`
-  :`<input name="n" placeholder="${sec.ph}" required aria-label="Lavoro"><input name="d" type="date" aria-label="Data prevista"><select name="c" aria-label="Categoria">${Object.entries(CATS).map(([k,v])=>`<option value="${k}">${v}</option>`).join('')}</select><select name="p" aria-label="Priorità"><option value="0">Normale</option><option value="1">Urgente</option></select><input name="rn" type="number" min="1" placeholder="Ripeti ogni… mesi (opz.)" aria-label="Ripeti ogni (mesi)"><input type="hidden" name="ru" value="m"><button>Aggiungi lavoro</button><button type="button" class="ghost" data-addc="1">Annulla</button>`;
+  :`<input name="n" placeholder="${sec.ph}" required aria-label="Lavoro"><input name="d" type="date" aria-label="Data prevista"><select name="c" aria-label="Categoria">${Object.entries(CATS).map(([k,v])=>`<option value="${k}">${v}</option>`).join('')}</select><select name="p" aria-label="Priorità"><option value="0">Normale</option><option value="1">Urgente</option></select><input name="rn" type="number" min="1" placeholder="Ripeti ogni… (opz.)" aria-label="Ripeti ogni"><select name="ru" aria-label="Unità"><option value="m">mesi</option><option value="h">ore motore</option></select><button>Aggiungi lavoro</button><button type="button" class="ghost" data-addc="1">Annulla</button>`;
  if(isChk){$('list').innerHTML=chkList(items);return}
  let rows=items.map((it,i)=>({it,i})).filter(r=>isScad?(!S.sf||S.sf==='all'||(S.sf==='red'?days(r.it.date)<0:S.sf==='amb'?days(r.it.date)>=0&&days(r.it.date)<=30:days(r.it.date)>30)):!!r.it.done===isSto);
  if(!isScad&&S.f!=='all')rows=rows.filter(r=>r.it.c===S.f);
