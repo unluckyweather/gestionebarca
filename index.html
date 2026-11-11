@@ -134,10 +134,57 @@ const addY=(s,n)=>{const d=new Date(s+'T00:00:00');d.setFullYear(d.getFullYear()
 const addM=(s,n)=>{const d=new Date(s+'T00:00:00');d.setMonth(d.getMonth()+n);return iso(d)};
 const eur=x=>(+x).toLocaleString('it-IT',{style:'currency',currency:'EUR'});
 const bd=k=>{const n=(S.data[k]||[]).filter(i=>!i.done&&((i.date&&days(i.date)<0)||(k==='lav'&&i.dh&&((S.data.eng||{}).h||0)>=i.dh))).length;return n?`<em class="bd">${n>99?'99+':n}</em>`:''};
+const PW=('278 278 355 556 556 889 667 191 333 333 389 584 278 333 278 278'+' 556'.repeat(10)+' 278 278 584 584 584 556 1015 667 667 722 722 667 611 778 722 278 500 667 556 833 722 778 667 778 722 667 611 722 667 944 667 667 611 278 278 278 469 556 333 556 556 500 556 556 278 556 556 222 222 500 222 833 556 556 556 556 333 500 278 556 500 722 500 500 500 334 260 334 584').split(' ').map(Number);
+function pdfStorico(items){
+ const W=595,H=842,M=44,R=W-M,CW=R-M,pages=[];let c,y;
+ const enc=t=>{const m={'€':'\x80','’':'\x92','‘':'\x91','“':'\x93','”':'\x94','–':'\x96','—':'\x97','•':'\x95'};return String(t).replace(/[\u00a0\u202f]/g,' ').replace(/[\r\n\t]/g,' ').split('').map(ch=>m[ch]||(ch.charCodeAt(0)<256?ch:'?')).join('').replace(/([\\()])/g,'\\$1')};
+ const tw=(t,s,b)=>[...String(t)].reduce((a,ch)=>{const k=ch.charCodeAt(0);return a+(k>=32&&k<127?PW[k-32]:556)},0)*s/1000*(b?1.06:1);
+ const wrap=(t,s,w,b)=>{const out=[];let l='';for(const word of String(t).split(/\s+/).filter(Boolean)){const tr=l?l+' '+word:word;if(tw(tr,s,b)<=w){l=tr}else{if(l)out.push(l);l=word;while(tw(l,s,b)>w&&l.length>1){let k=l.length-1;while(k>1&&tw(l.slice(0,k),s,b)>w)k--;out.push(l.slice(0,k));l=l.slice(k)}}}if(l)out.push(l);return out};
+ const np=()=>{c=[];pages.push(c);y=H-M};
+ const tx=(t,x,yy,s,b,col)=>c.push(`BT /${b?'F2':'F1'} ${s} Tf ${col||'0.06 0.13 0.21'} rg ${x.toFixed(1)} ${yy.toFixed(1)} Td (${enc(t)}) Tj ET`);
+ const rtx=(t,yy,s,b,col)=>tx(t,R-tw(t,s,b),yy,s,b,col);
+ const ln=(yy,wt,col)=>c.push(`${col||'0.88 0.9 0.93'} RG ${wt} w ${M} ${yy.toFixed(1)} m ${R} ${yy.toFixed(1)} l S`);
+ const G='0.35 0.42 0.5';
+ np();
+ tx('Boat Journal',M,y-18,20,1);y-=26;
+ tx('Storico lavori eseguiti',M,y-14,12,0,G);y-=18;
+ tx('Generato il '+new Date().toLocaleDateString('it-IT',{day:'numeric',month:'long',year:'numeric'}),M,y-12,9,0,'0.45 0.5 0.56');y-=22;
+ const tot={};let all=0;items.forEach(i=>{if(i.cost){const yr=(i.doneDate||'').slice(0,4)||'senza data';tot[yr]=(tot[yr]||0)+(+i.cost);all+=+i.cost}});
+ tx('Lavori eseguiti: '+items.length,M,y-12,10,1);
+ if(all)rtx('Spesa totale: '+eur(all),y-12,10,1);
+ y-=18;
+ Object.keys(tot).sort().reverse().forEach(yr=>{tx(yr,M,y-11,9.5,0,G);rtx(eur(tot[yr]),y-11,9.5,0,G);y-=14});
+ y-=6;ln(y,1.2,'0.06 0.13 0.21');y-=14;
+ if(!items.length)tx('Nessun lavoro eseguito.',M,y-12,10,0);
+ items.forEach(it=>{
+  const nm=wrap(it.n,11,CW-90,1),ml=wrap([it.doneDate?'Eseguito il '+fmt(it.doneDate):'Data di esecuzione non indicata',CATS[it.c]||'',it.date?'Prevista il '+fmt(it.date):'',it.by?'Eseguito da '+it.by:''].filter(Boolean).join('  ·  '),9,CW,0),nl=it.note?wrap('Note: '+it.note,9.5,CW,0):[];
+  const h=nm.length*14+ml.length*12+nl.length*12+16;
+  if(y-h<M+20)np();
+  let yy=y;
+  nm.forEach(l=>{tx(l,M,yy-11,11,1);yy-=14});
+  if(it.cost)rtx(eur(it.cost),y-11,11,1);
+  ml.forEach(l=>{tx(l,M,yy-9,9,0,'0.42 0.48 0.54');yy-=12});
+  nl.forEach(l=>{tx(l,M,yy-9,9.5,0);yy-=12});
+  yy-=4;ln(yy,0.5);y=yy-10;
+ });
+ pages.forEach((p,i)=>{c=p;tx('Boat Journal  ·  pagina '+(i+1)+' di '+pages.length,M,24,8,0,'0.55 0.6 0.65')});
+ const objs=[null,'<</Type/Catalog/Pages 2 0 R>>',null,'<</Type/Font/Subtype/Type1/BaseFont/Helvetica/Encoding/WinAnsiEncoding>>','<</Type/Font/Subtype/Type1/BaseFont/Helvetica-Bold/Encoding/WinAnsiEncoding>>'],kids=[];
+ pages.forEach((p,i)=>{const po=5+2*i,co=po+1,st=p.join('\n');kids.push(po+' 0 R');objs[po]=`<</Type/Page/Parent 2 0 R/MediaBox[0 0 ${W} ${H}]/Resources<</Font<</F1 3 0 R/F2 4 0 R>>>>/Contents ${co} 0 R>>`;objs[co]=`<</Length ${st.length}>>\nstream\n${st}\nendstream`});
+ objs[2]=`<</Type/Pages/Kids[${kids.join(' ')}]/Count ${pages.length}>>`;
+ let out='%PDF-1.4\n';const off=[];
+ for(let i=1;i<objs.length;i++){off[i]=out.length;out+=`${i} 0 obj\n${objs[i]}\nendobj\n`}
+ const x=out.length;out+=`xref\n0 ${objs.length}\n0000000000 65535 f \n`+off.slice(1).map(o=>String(o).padStart(10,'0')+' 00000 n \n').join('')+`trailer\n<</Size ${objs.length}/Root 1 0 R>>\nstartxref\n${x}\n%%EOF`;
+ return Uint8Array.from(out,ch=>ch.charCodeAt(0)&255)}
+async function saveFile(data,name,type){
+ try{const f=new File([data],name,{type});
+  if(matchMedia('(pointer:coarse)').matches&&navigator.canShare&&navigator.canShare({files:[f]})){await navigator.share({files:[f],title:name});return}
+ }catch(e){if(e&&e.name==='AbortError')return}
+ try{const u=URL.createObjectURL(new Blob([data],{type})),a=document.createElement('a');a.href=u;a.download=name;document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(u),4000)}catch(e){alert('Non riesco a creare il file su questo dispositivo.')}}
+function exportPdf(){saveFile(pdfStorico((S.data.lav||[]).filter(i=>i.done).sort((a,b)=>(b.doneDate||'').localeCompare(a.doneDate||''))),'storico-lavori.pdf','application/pdf')}
 function engCard(items){
  if(S.sec==='lav'){const e=S.data.eng||{};return `<label for="eh">Ore motore</label><input id="eh" type="number" min="0" step="0.1" inputmode="decimal" value="${e.h??''}"><button data-eng="1">Aggiorna</button><small>${e.d?'aggiornate il '+fmt(e.d):'non ancora inserite'}</small>`}
  if(S.sec==='chk'){const ds=(S.data.dot||[]).filter(i=>days(i.date)<0).length,dc=(S.data.doc||[]).filter(i=>days(i.date)<0).length,all=items.length&&items.every(i=>i.ok);let m='';if(dc)m+=`<b style="color:var(--red)">${dc} ${dc===1?'documento scaduto':'documenti scaduti'}</b>`;if(ds)m+=`<b style="color:var(--red)">${ds} ${ds===1?'dotazione scaduta':'dotazioni scadute'}</b>`;if(!m)m=all?'<b style="color:var(--ok)">Tutto pronto per partire ✓</b>':'<span>Documenti e dotazioni in regola</span>';return m+'<button class="rs" data-reset="1">Azzera spunte</button>'}
- if(S.sec==='sto'){const tot={};items.forEach(i=>{if(i.done&&i.cost){const y=(i.doneDate||'').slice(0,4)||'senza data';tot[y]=(tot[y]||0)+(+i.cost)}});const ys=Object.keys(tot).sort().reverse();return ys.length?'<b>Spese per anno</b>'+ys.map(y=>`<span>${y}: <b>${eur(tot[y])}</b></span>`).join(''):''}
+ if(S.sec==='sto'){const tot={};items.forEach(i=>{if(i.done&&i.cost){const y=(i.doneDate||'').slice(0,4)||'senza data';tot[y]=(tot[y]||0)+(+i.cost)}});const ys=Object.keys(tot).sort().reverse();return (ys.length?'<b>Spese per anno</b>'+ys.map(y=>`<span>${y}: <b>${eur(tot[y])}</b></span>`).join(''):'')+(items.some(i=>i.done)?'<button class="rs" data-pdf="1">Esporta PDF</button>':'')}
  return ''}
 const grpOpts=sel=>[...new Set([...GR,...(S.data.chk||[]).map(i=>i.g)])].map(g=>`<option${g===sel?' selected':''}>${esc(g)}</option>`).join('');
 function chkList(items){
@@ -188,6 +235,7 @@ document.addEventListener('click',e=>{
  else if(t.dataset.f){S.f=t.dataset.f}
  else if(t.dataset.add){S.add=true;render();const n=document.querySelector('#f [name=n]');if(n)n.focus();return}
  else if(t.dataset.addc){S.add=false}
+ else if(t.dataset.pdf){exportPdf();return}
  else if(t.dataset.reset){S.data.chk.forEach(i=>i.ok=false);save()}
  else if(t.dataset.qy){const it=S.data[K()][S.ren],r=$('rd');if(it&&r)r.value=addY(it.date,+t.dataset.qy);return}
  else if(t.dataset.eng){const v=parseFloat($('eh').value);if(isNaN(v))return;S.data.eng={h:v,d:iso(new Date())};save()}
